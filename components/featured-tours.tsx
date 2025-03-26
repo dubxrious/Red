@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type { Tour } from "@/types/tour"
 
 export async function FeaturedTours() {
-  const supabase = createServerSupabaseClient()
+  const supabase = await createServerSupabaseClient()
 
   // First check if the featured column exists
   const { error: checkError } = await supabase.from("tours").select("featured").limit(1).maybeSingle()
