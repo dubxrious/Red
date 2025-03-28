@@ -33,6 +33,8 @@ export interface Tour {
   tour_tags?: TourTag[]
   tour_features?: TourFeature[]
   max_capacity?: number
+  featured?: boolean
+  featured_order?: number
 }
 
 export interface TourFeature {

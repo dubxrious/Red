@@ -3,13 +3,26 @@ import { TourGridSkeleton } from "@/components/tour-grid-skeleton"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type { Tour } from "@/types/tour"
 
-export async function FeaturedTours() {
+// Modified component to accept tours as a prop or fetch them if not provided
+export async function FeaturedTours({ tours }: { tours?: Tour[] }) {
+  // If tours are provided, use them directly
+  if (tours && tours.length > 0) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {tours.map((tour) => (
+          <TourCard key={tour.id} tour={tour} />
+        ))}
+      </div>
+    )
+  }
+
+  // Otherwise, fetch tours from the database
   const supabase = await createServerSupabaseClient()
 
   // First check if the featured column exists
   const { error: checkError } = await supabase.from("tours").select("featured").limit(1).maybeSingle()
 
-  let tours = []
+  let fetchedTours = []
 
   // If the column doesn't exist, fall back to rating-based selection
   if (checkError && checkError.message.includes('column "featured" does not exist')) {
@@ -26,7 +39,7 @@ export async function FeaturedTours() {
       return <div>Error loading featured tours</div>
     }
 
-    tours = ratingData
+    fetchedTours = ratingData
   } else {
     // Use the featured flag and order
     const { data: featuredData, error: featuredError } = await supabase
@@ -42,20 +55,20 @@ export async function FeaturedTours() {
       return <div>Error loading featured tours</div>
     }
 
-    tours = featuredData
+    fetchedTours = featuredData
   }
 
   // Now fetch categories and destinations separately
-  if (tours.length > 0) {
-    // Get unique category and destination IDs
-    const categoryIds = [...new Set(tours.map((tour) => tour.category_id))]
-    const destinationIds = [...new Set(tours.map((tour) => tour.destination_id))]
+  if (fetchedTours.length > 0) {
+    // Get unique category and destination names
+    const categoryNames = [...new Set(fetchedTours.map((tour) => tour.category))]
+    const locationNames = [...new Set(fetchedTours.map((tour) => tour.location))]
 
     // Fetch categories
-    const { data: categories } = await supabase.from("categories").select("*").in("id", categoryIds)
+    const { data: categories } = await supabase.from("categories").select("*").in("slug", categoryNames)
 
     // Fetch destinations
-    const { data: destinations } = await supabase.from("destinations").select("*").in("id", destinationIds)
+    const { data: destinations } = await supabase.from("destinations").select("*").in("slug", locationNames)
 
     // Fetch tour tags
     const { data: tourTags } = await supabase
@@ -63,13 +76,13 @@ export async function FeaturedTours() {
       .select("*, tags(*)")
       .in(
         "tour_id",
-        tours.map((tour) => tour.id),
+        fetchedTours.map((tour) => tour.id),
       )
 
     // Manually join the data
-    tours = tours.map((tour) => {
-      const category = categories?.find((c) => c.id === tour.category_id)
-      const destination = destinations?.find((d) => d.id === tour.destination_id)
+    fetchedTours = fetchedTours.map((tour) => {
+      const category = categories?.find((c) => c.slug === tour.category)
+      const destination = destinations?.find((d) => d.slug === tour.location)
       const tags = tourTags?.filter((tt) => tt.tour_id === tour.id)
 
       return {
@@ -81,13 +94,13 @@ export async function FeaturedTours() {
     })
   }
 
-  if (!tours || tours.length === 0) {
+  if (!fetchedTours || fetchedTours.length === 0) {
     return <div>No featured tours available</div>
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {tours.map((tour) => (
+      {fetchedTours.map((tour) => (
         <TourCard key={tour.id} tour={tour as Tour} />
       ))}
     </div>

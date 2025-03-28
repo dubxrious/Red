@@ -1,0 +1,12 @@
+Tour,Icon,Label,Description
+(Note: After importing, you'll need to link each feature to a specific tour in Airtable. The 'Tour' column should be a link to records in the 'tourz' table.)
+,clock,Duration,3 hours
+,tag,Price,$50
+,users,Group Size,Maximum 15 travelers
+,message-square,Language,Tour available in English
+,rotate-ccw,Free Cancellation,Cancel anytime for a full refund
+,calendar,Unlimited Reschedule,Reschedule your tour as needed
+,map,Hotel Pickup,Includes hotel pickup and drop-off
+,coffee,Refreshments,Includes refreshments
+,utensils,Meals Included,Includes a full meal
+,shield,Safety Equipment,All safety gear provided 

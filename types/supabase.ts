@@ -32,6 +32,8 @@ export interface Database {
           infant_age: number | null
           child_age: number | null
           pickup_available: boolean
+          featured: boolean
+          featured_order: number | null
         }
         Insert: {
           id?: string
@@ -61,6 +63,8 @@ export interface Database {
           infant_age?: number | null
           child_age?: number | null
           pickup_available?: boolean
+          featured?: boolean
+          featured_order?: number | null
         }
         Update: {
           id?: string
@@ -90,6 +94,8 @@ export interface Database {
           infant_age?: number | null
           child_age?: number | null
           pickup_available?: boolean
+          featured?: boolean
+          featured_order?: number | null
         }
       }
       categories: {

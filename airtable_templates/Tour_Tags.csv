@@ -1,0 +1,10 @@
+Tour,Tag
+(Note: After importing, you'll need to link each row to a specific tour and tag in Airtable. The 'Tour' column should be a link to records in the 'tourz' table, and the 'Tag' column should be a link to records in the 'Tags' table.)
+,Beach
+,Adventure
+,Cultural
+,Family-friendly
+,Free Cancellation
+,Special Offer
+,Red Sea
+,Wildlife 

@@ -68,22 +68,26 @@ async function testAirtableConnection() {
   console.log('\nTesting Airtable connection...');
   
   try {
-    // Attempt to get schema (list of tables)
-    const tables = await airtable.tables();
-    const tableNames = tables.map(table => table.name);
+    // Attempt to list records from tourz table (instead of getting schema)
+    const records = await airtable('tourz').select({
+      maxRecords: 1
+    }).firstPage();
     
-    if (tableNames.length === 0) {
-      console.warn('⚠️ Connected to Airtable but no tables found.');
-      console.warn('   Did you create the required tables in your Airtable base?');
-      console.warn('   Required tables: tourx, Categories, Destinations, Tags, Tour Features, Tour Tags');
-      return false;
+    console.log(`✅ Successfully connected to Airtable! (Found ${records.length} records in tourz table)`);
+    
+    // Check if all required tables exist by trying to select from each
+    const requiredTables = ['tourz', 'Categories', 'Destinations', 'Tags', 'Tour Features', 'Tour Tags'];
+    const missingTables = [];
+    
+    for (const tableName of requiredTables) {
+      try {
+        await airtable(tableName).select({ maxRecords: 1 }).firstPage();
+      } catch (error) {
+        if (error.message.includes('could not be found') || error.message.includes('does not exist')) {
+          missingTables.push(tableName);
+        }
+      }
     }
-    
-    console.log(`✅ Successfully connected to Airtable! (Tables: ${tableNames.join(', ')})`);
-    
-    // Check for required tables
-    const requiredTables = ['tourx', 'Categories', 'Destinations', 'Tags', 'Tour Features', 'Tour Tags'];
-    const missingTables = requiredTables.filter(table => !tableNames.includes(table));
     
     if (missingTables.length > 0) {
       console.warn('⚠️ Some required Airtable tables are missing:');
@@ -104,6 +108,9 @@ async function testAirtableConnection() {
       console.error('\n   Check that your AIRTABLE_API_KEY is correct.');
     } else if (error.message.includes('not found') || error.message.includes('doesn\'t exist')) {
       console.error('\n   Check that your AIRTABLE_BASE_ID is correct.');
+    } else if (error.message.includes('could not be found') || error.message.includes('does not exist')) {
+      console.error('\n   Check that you have created the required tables in your Airtable base.');
+      console.error('   Required tables: tourz, Categories, Destinations, Tags, Tour Features, Tour Tags');
     }
     
     return false;
@@ -174,7 +181,7 @@ async function testCsvFile(csvPath) {
 }
 
 // Main function
-async function runTest() {
+async function runTest(skipCsvCheck = false) {
   console.log('=======================================');
   console.log('Airtable to Supabase Integration Test');
   console.log('=======================================\n');
@@ -183,18 +190,26 @@ async function runTest() {
   const supabaseConnected = await testSupabaseConnection();
   const airtableConnected = await testAirtableConnection();
   
-  // Test CSV file if specified
-  const csvPath = process.argv[2] || './tourz.csv';
-  const csvValid = await testCsvFile(csvPath);
+  // Test CSV file if specified and not skipped
+  let csvValid = true; // Default to true if skipping
+  if (!skipCsvCheck) {
+    const csvPath = process.argv[2] || './tourz.csv';
+    csvValid = await testCsvFile(csvPath);
+  } else {
+    console.log('\nSkipping CSV validation (not needed for direct Airtable sync)');
+  }
   
   console.log('\n---------------------------------------');
   console.log('Test Results:');
   console.log('---------------------------------------');
   console.log(`Supabase Connection: ${supabaseConnected ? '✅ PASSED' : '❌ FAILED'}`);
   console.log(`Airtable Connection: ${airtableConnected ? '✅ PASSED' : '❌ FAILED'}`);
-  console.log(`CSV File Validation: ${csvValid ? '✅ PASSED' : '❌ FAILED'}`);
   
-  const allPassed = supabaseConnected && airtableConnected && csvValid;
+  if (!skipCsvCheck) {
+    console.log(`CSV File Validation: ${csvValid ? '✅ PASSED' : '❌ FAILED'}`);
+  }
+  
+  const allPassed = supabaseConnected && airtableConnected && (skipCsvCheck || csvValid);
   
   console.log('\n---------------------------------------');
   console.log(`Overall Test: ${allPassed ? '✅ PASSED' : '❌ FAILED'}`);
@@ -202,8 +217,10 @@ async function runTest() {
   if (allPassed) {
     console.log('\n🎉 Your setup is ready for the Airtable to Supabase integration!');
     console.log('\nNext steps:');
-    console.log('1. Run "node scripts/airtable-to-supabase.js import-csv tourz.csv" to import data to Airtable');
-    console.log('2. Run "node scripts/airtable-to-supabase.js sync" to sync from Airtable to Supabase');
+    if (!skipCsvCheck) {
+      console.log('1. Run "node scripts/airtable-to-supabase.js import-csv tourz.csv" to import data to Airtable');
+    }
+    console.log(`${skipCsvCheck ? '1' : '2'}. Run "node scripts/sync-airtable-to-supabase.js sync" to sync from Airtable to Supabase`);
   } else {
     console.log('\n⚠️ Please fix the issues above before running the integration.');
   }
@@ -211,7 +228,12 @@ async function runTest() {
   return allPassed;
 }
 
-// Run the test
-runTest().then(passed => {
-  process.exit(passed ? 0 : 1);
-}); 
+// Export the runTest function
+module.exports = { runTest };
+
+// Run the test if this script is run directly
+if (require.main === module) {
+  runTest().then(passed => {
+    process.exit(passed ? 0 : 1);
+  });
+} 
